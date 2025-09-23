@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🤔 Questions & Discussions
+    url: https://github.com/RoboLancers/management/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://github.com/RoboLancers/management/wiki
+    about: Check our documentation and wiki for more information

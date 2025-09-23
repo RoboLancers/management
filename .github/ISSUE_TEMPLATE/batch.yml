@@ -1,0 +1,52 @@
+name: 📦 Batch
+description: Create a batch of related tasks
+title: "[BATCH] "
+labels: ["batch", "epic"]
+assignees: []
+body:
+  - type: textarea
+    id: overview
+    attributes:
+      label: What is this batch about?
+      placeholder: "Describe the collection of work"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "Low"
+        - "Medium"
+        - "High"
+        - "Critical"
+      default: 1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      options:
+        - "Small (1-2 weeks)"
+        - "Medium (3-6 weeks)"
+        - "Large (2-3 months)"
+        - "Extra Large (3+ months)"
+      default: 1
+
+  - type: input
+    id: target-completion
+    attributes:
+      label: Target completion
+      placeholder: "YYYY-MM-DD or milestone"
+
+  - type: textarea
+    id: exit-criteria
+    attributes:
+      label: Exit criteria
+      placeholder: |
+        - Add exit criteria here
+    validations:
+      required: true

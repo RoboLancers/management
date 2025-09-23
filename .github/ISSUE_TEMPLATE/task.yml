@@ -1,0 +1,42 @@
+name: 📋 Task
+description: Create a new task
+title: "[TASK] "
+labels: ["task"]
+assignees: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs to be done?
+      placeholder: "Describe the task"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Done when...
+      placeholder: |
+        - [ ] Criteria 1
+        - [ ] Criteria 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "Low"
+        - "Medium"
+        - "High"
+        - "Critical"
+      default: 1
+    validations:
+      required: true
+
+  - type: input
+    id: deadline
+    attributes:
+      label: Deadline (optional)
+      placeholder: "YYYY-MM-DD"
