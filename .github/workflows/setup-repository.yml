@@ -43,12 +43,66 @@ jobs:
       - name: Construct Repository Name
         id: repo-name
         run: |
-          REPO_NAME="${{ github.repository_owner }}/${{ inputs.team_number }}-${{ inputs.competition_name }}-${{ inputs.year }}"
-          echo "repository_name=$REPO_NAME" >> $GITHUB_OUTPUT
-          echo "Repository name: $REPO_NAME"
+          REPO_SHORT_NAME="${{ inputs.team_number }}-${{ inputs.competition_name }}-${{ inputs.year }}"
+          REPO_FULL_NAME="${{ github.repository_owner }}/$REPO_SHORT_NAME"
+          echo "repository_short_name=$REPO_SHORT_NAME" >> $GITHUB_OUTPUT
+          echo "repository_name=$REPO_FULL_NAME" >> $GITHUB_OUTPUT
+          echo "Repository name: $REPO_FULL_NAME"
 
-      - name: Checkout repository
+      - name: Create Repository
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          echo "Creating repository ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Check if repository already exists
+          if gh repo view ${{ steps.repo-name.outputs.repository_name }} &>/dev/null; then
+            echo "✅ Repository already exists!"
+          else
+            # Create the repository with README to initialize main branch
+            gh repo create ${{ steps.repo-name.outputs.repository_name }} \
+              --public \
+              --description "FRC ${{ inputs.year }} - ${{ inputs.competition_name }} (Team ${{ inputs.team_number }})" \
+              --enable-issues \
+              --enable-discussions \
+              --disable-wiki \
+              --clone=false
+            
+            echo "✅ Repository created successfully!"
+            
+            # Initialize the repository with an initial commit
+            TEMP_DIR=$(mktemp -d)
+            cd $TEMP_DIR
+            git init
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            echo "# ${{ steps.repo-name.outputs.repository_short_name }}" > README.md
+            echo "" >> README.md
+            echo "FRC ${{ inputs.year }} - ${{ inputs.competition_name }} - Team ${{ inputs.team_number }}" >> README.md
+            git add README.md
+            git commit -m "chore: initial commit"
+            git branch -M ${{ inputs.target_branch }}
+            git remote add origin "https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/${{ steps.repo-name.outputs.repository_name }}.git"
+            git push -u origin ${{ inputs.target_branch }}
+            cd -
+            rm -rf $TEMP_DIR
+            
+            echo "✅ Repository initialized with ${{ inputs.target_branch }} branch!"
+          fi
+
+      - name: Checkout management repository
         uses: actions/checkout@v4
+        with:
+          path: management
+
+      - name: Clone target repository
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          git clone "https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/${{ steps.repo-name.outputs.repository_name }}.git" target-repo
+          cd target-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Apply Branch Protection Rules
         env:
@@ -106,17 +160,16 @@ jobs:
 
       - name: Setup Pull Request Template
         run: |
+          cd target-repo
           echo "Setting up pull request template for ${{ steps.repo-name.outputs.repository_name }}..."
 
           # Create .github directory if it doesn't exist
           mkdir -p .github
 
           # Copy PR template from templates directory
-          cp templates/.github/PULL_REQUEST_TEMPLATE.md .github/PULL_REQUEST_TEMPLATE.md
+          cp ../management/templates/.github/PULL_REQUEST_TEMPLATE.md .github/PULL_REQUEST_TEMPLATE.md
 
           # Commit and push if there are changes
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .github/PULL_REQUEST_TEMPLATE.md
 
           if git diff --staged --quiet; then
@@ -129,13 +182,14 @@ jobs:
 
       - name: Setup Devcontainer Configuration
         run: |
+          cd target-repo
           echo "Setting up devcontainer configuration for ${{ steps.repo-name.outputs.repository_name }}..."
 
           # Create .devcontainer directory if it doesn't exist
           mkdir -p .devcontainer
 
           # Copy devcontainer from templates directory
-          cp templates/.devcontainer/devcontainer.json .devcontainer/devcontainer.json
+          cp ../management/templates/.devcontainer/devcontainer.json .devcontainer/devcontainer.json
 
           # Add devcontainer.json to git
           git add .devcontainer/devcontainer.json
@@ -150,10 +204,11 @@ jobs:
 
       - name: Setup Git Hooks
         run: |
+          cd target-repo
           echo "Setting up git hooks for ${{ steps.repo-name.outputs.repository_name }}..."
 
           # Copy git hooks from templates directory
-          cp -r templates/.githooks .githooks
+          cp -r ../management/templates/.githooks .githooks
 
           # Make hooks executable
           chmod +x .githooks/pre-commit .githooks/commit-msg
@@ -162,8 +217,6 @@ jobs:
           rm -f .githooks/README.md
 
           # Commit and push if there are changes
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .githooks/
 
           if git diff --staged --quiet; then
@@ -176,17 +229,16 @@ jobs:
 
       - name: Setup CI Workflow
         run: |
+          cd target-repo
           echo "Setting up CI workflow for ${{ steps.repo-name.outputs.repository_name }}..."
 
           # Create .github/workflows directory if it doesn't exist
           mkdir -p .github/workflows
 
           # Copy build.yml from templates
-          cp templates/.github/workflows/build.yml .github/workflows/build.yml
+          cp ../management/templates/.github/workflows/build.yml .github/workflows/build.yml
 
           # Commit and push if there are changes
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .github/workflows/build.yml
 
           if git diff --staged --quiet; then
@@ -199,50 +251,49 @@ jobs:
 
       - name: Setup WPILib Project Files
         run: |
+          cd target-repo
           echo "Setting up WPILib project files for ${{ steps.repo-name.outputs.repository_name }}..."
 
           # Copy .vscode settings
           mkdir -p .vscode
-          cp -r templates/.vscode/* .vscode/
+          cp -r ../management/templates/.vscode/* .vscode/
 
           # Copy .wpilib preferences and update with team number and year
           mkdir -p .wpilib
-          cp templates/.wpilib/wpilib_preferences.json .wpilib/
+          cp ../management/templates/.wpilib/wpilib_preferences.json .wpilib/
 
           # Update team number and project year in wpilib_preferences.json
           sed -i 's/"teamNumber": [0-9]*/"teamNumber": ${{ inputs.team_number }}/' .wpilib/wpilib_preferences.json
-          sed -i 's/"projectYear": "[0-9]*"/"projectYear": "${{ inputs.year }}"/' .wpilib/wpilib_preferences.json
+          sed -i 's/"projectYear": "[^"]*"/"projectYear": "${{ inputs.year }}"/' .wpilib/wpilib_preferences.json
 
           # Copy Gradle wrapper and build files
           mkdir -p gradle/wrapper
-          cp templates/gradle/wrapper/* gradle/wrapper/
-          cp templates/gradlew .
-          cp templates/gradlew.bat .
+          cp ../management/templates/gradle/wrapper/* gradle/wrapper/
+          cp ../management/templates/gradlew .
+          cp ../management/templates/gradlew.bat .
           chmod +x gradlew
 
           # Copy build configuration files
-          cp templates/build.gradle .
-          cp templates/settings.gradle .
+          cp ../management/templates/build.gradle .
+          cp ../management/templates/settings.gradle .
 
           # Copy .gitignore
-          cp templates/.gitignore .
+          cp ../management/templates/.gitignore .
 
           # Copy WPILib license
-          cp templates/WPILib-License.md .
+          cp ../management/templates/WPILib-License.md .
 
           # Copy source code structure
           mkdir -p src/main/java/frc/robot/{commands,subsystems}
           mkdir -p src/main/deploy
-          cp -r templates/src/main/java/frc/robot/* src/main/java/frc/robot/
-          cp templates/src/main/deploy/example.txt src/main/deploy/
+          cp -r ../management/templates/src/main/java/frc/robot/* src/main/java/frc/robot/
+          cp ../management/templates/src/main/deploy/example.txt src/main/deploy/
 
           # Copy vendordeps directory
           mkdir -p vendordeps
-          cp templates/vendordeps/README.md vendordeps/
+          cp ../management/templates/vendordeps/README.md vendordeps/
 
           # Commit and push if there are changes
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .vscode/ .wpilib/ gradle/ gradlew gradlew.bat build.gradle settings.gradle .gitignore WPILib-License.md src/ vendordeps/
 
           if git diff --staged --quiet; then
