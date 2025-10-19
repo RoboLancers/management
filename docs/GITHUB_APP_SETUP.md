@@ -1,8 +1,34 @@
 # GitHub App Setup Guide
 
-This guide will walk you through creating and configuring a GitHub App for the repository automation workflow.
+**The `robolancers-repository-manager` GitHub App is already set up and working.** This document explains how it was configured for reference and in case you need to create another one in the future.
 
-## Why Use a GitHub App?
+## Quick Links
+
+- **View the app**: `https://github.com/organizations/RoboLancers/settings/installations/90586387`
+- **Rotate private key**: See [Rotating the Private Key](#rotating-the-private-key)
+- **View app activity**: `https://github.com/organizations/RoboLancers/settings/audit-log`
+
+**Can't access these links?** You need organization owner permissions. Ask a mentor or organization owner for help.
+
+## Required Permissions
+
+If you need to create another GitHub App, it needs these permissions:
+
+**Repository permissions:**
+
+- **Administration**: Read and write (for branch protection and repository settings)
+- **Contents**: Read and write (for creating files and commits)
+- **Pull requests**: Read and write (for PR template)
+- **Workflows**: Read and write (for creating workflow files)
+- **Metadata**: Read-only (automatic)
+
+---
+
+## How It Was Set Up
+
+This section documents the setup process for reference.
+
+### Why Use a GitHub App?
 
 GitHub Apps provide several advantages over Personal Access Tokens (PATs):
 
@@ -12,7 +38,7 @@ GitHub Apps provide several advantages over Personal Access Tokens (PATs):
 - ✅ **No user dependency**: Doesn't rely on a specific user's account staying active
 - ✅ **Rate limits**: Higher API rate limits than PATs
 
-## Step 1: Create a GitHub App
+### Step 1: Create a GitHub App
 
 1. **Navigate to GitHub App settings**:
 
@@ -57,14 +83,14 @@ GitHub Apps provide several advantages over Personal Access Tokens (PATs):
 
 5. **Click "Create GitHub App"**
 
-## Step 2: Generate and Download Private Key
+### Step 2: Generate and Download Private Key
 
 1. After creating the app, scroll down to **"Private keys"**
 2. Click **"Generate a private key"**
 3. A `.pem` file will be downloaded automatically
 4. **⚠️ IMPORTANT**: Store this file securely - you cannot download it again!
 
-## Step 3: Install the GitHub App
+### Step 3: Install the GitHub App
 
 1. On the GitHub App page, click **"Install App"** in the left sidebar
 2. Select **RoboLancers** organization (or your account)
@@ -77,13 +103,13 @@ GitHub Apps provide several advantages over Personal Access Tokens (PATs):
 
 4. Click **"Install"**
 
-## Step 4: Get Your App ID
+### Step 4: Get Your App ID
 
 1. Go back to the GitHub App settings page
 2. At the top, you'll see **"App ID"** - copy this number
 3. Example: `123456`
 
-## Step 5: Add Secrets to Repository
+### Step 5: Add Secrets to Repository
 
 Now add the credentials to the `management` repository:
 
@@ -97,17 +123,41 @@ Now add the credentials to the `management` repository:
    - Click **"Add secret"**
 
 3. **Add APP_PRIVATE_KEY secret**:
+
    - Click **"New repository secret"**
    - Name: `APP_PRIVATE_KEY`
-   - Value: Open the `.pem` file you downloaded and copy the **entire contents** including:
-     ```
-     -----BEGIN RSA PRIVATE KEY-----
-     (all the encoded content)
-     -----END RSA PRIVATE KEY-----
-     ```
+   - Value: Copy the private key to your clipboard using one of these commands:
+
+   **macOS:**
+
+   ```bash
+   pbcopy < ~/Downloads/your-app-name.*.private-key.pem
+   ```
+
+   **Linux:**
+
+   ```bash
+   cat ~/Downloads/your-app-name.*.private-key.pem | xclip -selection clipboard
+   # OR if you have xsel installed:
+   cat ~/Downloads/your-app-name.*.private-key.pem | xsel --clipboard
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   Get-Content "$env:USERPROFILE\Downloads\your-app-name.*.private-key.pem" | Set-Clipboard
+   ```
+
+   **Windows (Command Prompt):**
+
+   ```cmd
+   type "%USERPROFILE%\Downloads\your-app-name.*.private-key.pem" | clip
+   ```
+
+   - Paste the clipboard contents (should include `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----`)
    - Click **"Add secret"**
 
-## Step 6: Test the Setup
+### Step 6: Test the Setup
 
 1. Go to the **Actions** tab in the management repository
 2. Select the **"Setup Repository"** workflow
@@ -121,6 +171,8 @@ If everything is configured correctly:
 - ✅ Branch protection rules will be applied to the target repository
 - ✅ Repository settings will be updated
 - ✅ PR template will be created
+
+---
 
 ## Troubleshooting
 
@@ -216,12 +268,65 @@ If everything is configured correctly:
 
 ## Managing the GitHub App
 
+### Rotating the Private Key
+
+If the private key expires or is compromised, the app owner needs to generate a new one:
+
+1. Go to `https://github.com/organizations/RoboLancers/settings/apps/robolancers-repository-manager`
+2. Scroll to **Private keys** section
+3. Click **"Generate a private key"**
+4. Download the `.pem` file (it downloads automatically)
+5. Copy the private key to your clipboard:
+
+   **macOS:**
+
+   ```bash
+   pbcopy < ~/Downloads/your-app-name.*.private-key.pem
+   ```
+
+   **Linux:**
+
+   ```bash
+   cat ~/Downloads/your-app-name.*.private-key.pem | xclip -selection clipboard
+   # OR if you have xsel installed:
+   cat ~/Downloads/your-app-name.*.private-key.pem | xsel --clipboard
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   Get-Content "$env:USERPROFILE\Downloads\your-app-name.*.private-key.pem" | Set-Clipboard
+   ```
+
+   **Windows (Command Prompt):**
+
+   ```cmd
+   type "%USERPROFILE%\Downloads\your-app-name.*.private-key.pem" | clip
+   ```
+
+6. Update the repository secret:
+   - Go to `https://github.com/RoboLancers/management/settings/secrets/actions`
+   - Click on `APP_PRIVATE_KEY`
+   - Click **"Update secret"**
+   - Paste the clipboard contents (should include `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----`)
+   - Click **"Update secret"**
+7. Test the workflow to make sure it works with the new key
+8. Delete the old private key from the GitHub App settings
+
+**When to rotate:**
+
+- Private key expires (GitHub Apps keys don't auto-expire, but best practice is 6-12 months)
+- Key is accidentally exposed
+- Team member with access to the key leaves
+- As part of regular security maintenance
+
 ### View App Activity
 
-```bash
-# View recent activity by the app
-gh api /orgs/RoboLancers/audit-log | jq '.[] | select(.actor == "RoboLancers Repository Manager")'
-```
+You can view the GitHub App's activity in your organization's audit log:
+
+1. Go to `https://github.com/organizations/RoboLancers/settings/audit-log`
+2. Filter by actor: "RoboLancers Repository Manager"
+3. Review recent actions performed by the app
 
 ### Revoke Access
 

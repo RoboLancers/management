@@ -13,7 +13,7 @@ This document explains the different devcontainer configurations used in the Rob
 **Features**:
 
 - Lightweight Ubuntu base image
-- Git and GitHub CLI tools
+- Git tools
 - GitHub Actions YAML extension
 - No Java/build tools (not needed)
 
@@ -24,8 +24,7 @@ This document explains the different devcontainer configurations used in the Rob
   "name": "Management Repository",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/git:1": {}
   },
   "postCreateCommand": "git config core.hooksPath .githooks"
 }
@@ -88,7 +87,6 @@ This document explains the different devcontainer configurations used in the Rob
 - ✅ Fast startup time
 - ✅ Minimal resource usage
 - ✅ Text editing and git operations
-- ✅ GitHub CLI for automation
 - ❌ No need for Java/build tools
 - ❌ No GUI applications
 
@@ -154,11 +152,6 @@ To update WPILib version for robot code repos:
 
 - Should be very fast (< 30 seconds)
 - If slow, check Docker/Codespaces resources
-
-**GitHub CLI not working**:
-
-- Authenticate with `gh auth login`
-- Check if feature installed: `gh --version`
 
 ### Robot Code Repo Issues
 
