@@ -242,7 +242,7 @@ jobs:
 
           # Copy vendordeps directory
           mkdir -p vendordeps
-          cp ../management/templates/vendordeps/README.md vendordeps/
+          cp ../management/templates/vendordeps/* vendordeps/
 
           # Commit and push if there are changes
           git add .vscode/ .wpilib/ gradle/ gradlew gradlew.bat build.gradle settings.gradle .gitignore WPILib-License.md src/ vendordeps/
