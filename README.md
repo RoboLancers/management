@@ -102,7 +102,7 @@ This automation configures:
 1. **GitHub App Authentication** (Required):
 
    - A GitHub App must be created and installed for the RoboLancers organization
-   - The app needs `Administration`, `Contents`, and `Pull requests` permissions
+   - The app needs `Administration`, `Contents`, `Pull requests`, and `Workflows` permissions
    - App credentials (`APP_ID` and `APP_PRIVATE_KEY`) must be stored as repository secrets
    - 📖 **See [GitHub App Setup Guide](docs/GITHUB_APP_SETUP.md) for detailed instructions**
 

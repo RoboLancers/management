@@ -41,8 +41,9 @@ GitHub Apps provide several advantages over Personal Access Tokens (PATs):
    Under **Repository permissions**:
 
    - **Administration**: `Read and write` ⚠️ (Required for branch protection and repo settings)
-   - **Contents**: `Read and write` (Required for creating PR template)
+   - **Contents**: `Read and write` (Required for creating files and pushing commits)
    - **Pull requests**: `Read and write` (Required for PR template)
+   - **Workflows**: `Read and write` ⚠️ (Required for creating/updating workflow files)
    - **Metadata**: `Read-only` (Automatically selected)
 
    Under **Organization permissions** (if applicable):
