@@ -95,12 +95,18 @@ This automation configures:
 - **Branch Protection**: Required to pass before merging to main
 - **Build Status**: Clear visibility of build health
 
-#### ⚡ Codespaces Prebuilds
+#### ⚡ Codespaces Prebuilds (Optional but Recommended)
 
-- **Automatic Configuration**: Prebuilds are set up automatically for the main branch
-- **Faster Startup**: Reduces Codespace creation from 5-10 minutes to ~1 minute
-- **Auto-rebuild**: Automatically rebuilds when devcontainer.json or dependencies change
-- **Cached Environment**: WPILib installation, Gradle wrapper, and Java setup are pre-built
+To enable faster Codespace startup (~1 minute instead of 5-10 minutes):
+
+1. Go to repository **Settings** → **Codespaces**
+2. Click **"Set up prebuild"**
+3. Select:
+   - **Branch**: `main`
+   - **Configuration**: `.devcontainer/devcontainer.json`
+4. Click **Create**
+
+This will cache the WPILib installation, Gradle dependencies, and Java setup for instant Codespace creation.
 
 ### Usage
 
