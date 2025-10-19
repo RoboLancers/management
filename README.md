@@ -95,6 +95,13 @@ This automation configures:
 - **Branch Protection**: Required to pass before merging to main
 - **Build Status**: Clear visibility of build health
 
+#### ⚡ Codespaces Prebuilds
+
+- **Automatic Configuration**: Prebuilds are set up automatically for the main branch
+- **Faster Startup**: Reduces Codespace creation from 5-10 minutes to ~1 minute
+- **Auto-rebuild**: Automatically rebuilds when devcontainer.json or dependencies change
+- **Cached Environment**: WPILib installation, Gradle wrapper, and Java setup are pre-built
+
 ### Usage
 
 #### Prerequisites

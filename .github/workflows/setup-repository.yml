@@ -315,6 +315,27 @@ jobs:
 
           echo "✅ Branch protection rules applied successfully!"
 
+      - name: Setup Codespaces Prebuild
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          echo "Setting up Codespaces prebuild for ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Create prebuild configuration for main branch
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${{ steps.repo-name.outputs.repository_name }}/codespaces/prebuilds" \
+            --input - <<EOF
+          {
+            "ref": "${{ inputs.target_branch }}",
+            "devcontainer_path": ".devcontainer/devcontainer.json"
+          }
+          EOF
+
+          echo "✅ Codespaces prebuild configured successfully!"
+
       - name: Summary
         run: |
           echo "## Repository Setup Complete! 🎉" >> $GITHUB_STEP_SUMMARY
@@ -332,5 +353,6 @@ jobs:
           echo "- ✅ Devcontainer Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Git Hooks (pre-commit, commit-msg)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CI Workflow (build.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Codespaces Prebuild (for faster startup)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ WPILib Project Structure (Gradle, VS Code, build files)" >> $GITHUB_STEP_SUMMARY
           echo "- 🎯 Protected Branch: ${{ inputs.target_branch }}" >> $GITHUB_STEP_SUMMARY
