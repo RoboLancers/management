@@ -1,0 +1,274 @@
+name: Setup Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      team_number:
+        description: "Team number"
+        required: true
+        type: choice
+        options:
+          - "321"
+          - "427"
+      competition_name:
+        description: "Competition name (e.g., Reefscape) or 'Offseason'"
+        required: true
+        type: string
+      year:
+        description: "Year (YYYY format, e.g., 2025)"
+        required: true
+        type: string
+      target_branch:
+        description: "Branch to protect (default: main)"
+        required: false
+        type: string
+        default: "main"
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Generate GitHub App Token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Construct Repository Name
+        id: repo-name
+        run: |
+          REPO_NAME="${{ github.repository_owner }}/${{ inputs.team_number }}-${{ inputs.competition_name }}-${{ inputs.year }}"
+          echo "repository_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "Repository name: $REPO_NAME"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Apply Branch Protection Rules
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          echo "Applying branch protection rules to ${{ inputs.target_branch }} on ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Create branch protection rule with required CI checks
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${{ steps.repo-name.outputs.repository_name }}/branches/${{ inputs.target_branch }}/protection" \
+            -f required_status_checks='{"strict":true,"contexts":["spotless","build"]}' \
+            -f enforce_admins=true \
+            -f required_pull_request_reviews='{"dismissal_restrictions":{},"dismiss_stale_reviews":true,"require_code_owner_reviews":true,"required_approving_review_count":1,"require_last_push_approval":false,"bypass_pull_request_allowances":{}}' \
+            -f restrictions=null \
+            -f required_linear_history=true \
+            -f allow_force_pushes=false \
+            -f allow_deletions=false \
+            -f block_creations=false \
+            -f required_conversation_resolution=true \
+            -f lock_branch=false \
+            -f allow_fork_syncing=false
+
+          echo "✅ Branch protection rules applied successfully!"
+
+      - name: Apply Repository Settings
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          echo "Applying repository settings to ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Update repository settings
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${{ steps.repo-name.outputs.repository_name }}" \
+            -f has_issues=true \
+            -f has_projects=true \
+            -f has_wiki=false \
+            -f has_discussions=true \
+            -f allow_squash_merge=true \
+            -f allow_merge_commit=false \
+            -f allow_rebase_merge=true \
+            -f allow_auto_merge=true \
+            -f delete_branch_on_merge=true \
+            -f allow_update_branch=true \
+            -f squash_merge_commit_title="PR_TITLE" \
+            -f squash_merge_commit_message="PR_BODY" \
+            -f web_commit_signoff_required=false
+
+          echo "✅ Repository settings applied successfully!"
+
+      - name: Setup Pull Request Template
+        run: |
+          echo "Setting up pull request template for ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Create .github directory if it doesn't exist
+          mkdir -p .github
+
+          # Copy PR template from templates directory
+          cp templates/.github/PULL_REQUEST_TEMPLATE.md .github/PULL_REQUEST_TEMPLATE.md
+
+          # Commit and push if there are changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/PULL_REQUEST_TEMPLATE.md
+
+          if git diff --staged --quiet; then
+            echo "✅ PR template already exists and is up to date!"
+          else
+            git commit -m "chore: add pull request template"
+            git push
+            echo "✅ PR template created and committed!"
+          fi
+
+      - name: Setup Devcontainer Configuration
+        run: |
+          echo "Setting up devcontainer configuration for ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Create .devcontainer directory if it doesn't exist
+          mkdir -p .devcontainer
+
+          # Copy devcontainer from templates directory
+          cp templates/.devcontainer/devcontainer.json .devcontainer/devcontainer.json
+
+          # Add devcontainer.json to git
+          git add .devcontainer/devcontainer.json
+
+          if git diff --staged --quiet; then
+            echo "✅ Devcontainer configuration already exists and is up to date!"
+          else
+            git commit -m "chore: add devcontainer configuration"
+            git push
+            echo "✅ Devcontainer configuration created and committed!"
+          fi
+
+      - name: Setup Git Hooks
+        run: |
+          echo "Setting up git hooks for ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Copy git hooks from templates directory
+          cp -r templates/.githooks .githooks
+
+          # Make hooks executable
+          chmod +x .githooks/pre-commit .githooks/commit-msg
+
+          # Remove README from hooks directory (not needed in deployed repos)
+          rm -f .githooks/README.md
+
+          # Commit and push if there are changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .githooks/
+
+          if git diff --staged --quiet; then
+            echo "✅ Git hooks already exist and are up to date!"
+          else
+            git commit -m "chore: add git hooks"
+            git push
+            echo "✅ Git hooks created and committed!"
+          fi
+
+      - name: Setup CI Workflow
+        run: |
+          echo "Setting up CI workflow for ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Create .github/workflows directory if it doesn't exist
+          mkdir -p .github/workflows
+
+          # Copy build.yml from templates
+          cp templates/.github/workflows/build.yml .github/workflows/build.yml
+
+          # Commit and push if there are changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/build.yml
+
+          if git diff --staged --quiet; then
+            echo "✅ CI workflow already exists and is up to date!"
+          else
+            git commit -m "ci: add build workflow"
+            git push
+            echo "✅ CI workflow created and committed!"
+          fi
+
+      - name: Setup WPILib Project Files
+        run: |
+          echo "Setting up WPILib project files for ${{ steps.repo-name.outputs.repository_name }}..."
+
+          # Copy .vscode settings
+          mkdir -p .vscode
+          cp -r templates/.vscode/* .vscode/
+
+          # Copy .wpilib preferences and update with team number and year
+          mkdir -p .wpilib
+          cp templates/.wpilib/wpilib_preferences.json .wpilib/
+
+          # Update team number and project year in wpilib_preferences.json
+          sed -i 's/"teamNumber": [0-9]*/"teamNumber": ${{ inputs.team_number }}/' .wpilib/wpilib_preferences.json
+          sed -i 's/"projectYear": "[0-9]*"/"projectYear": "${{ inputs.year }}"/' .wpilib/wpilib_preferences.json
+
+          # Copy Gradle wrapper and build files
+          mkdir -p gradle/wrapper
+          cp templates/gradle/wrapper/* gradle/wrapper/
+          cp templates/gradlew .
+          cp templates/gradlew.bat .
+          chmod +x gradlew
+
+          # Copy build configuration files
+          cp templates/build.gradle .
+          cp templates/settings.gradle .
+
+          # Copy .gitignore
+          cp templates/.gitignore .
+
+          # Copy WPILib license
+          cp templates/WPILib-License.md .
+
+          # Copy source code structure
+          mkdir -p src/main/java/frc/robot/{commands,subsystems}
+          mkdir -p src/main/deploy
+          cp -r templates/src/main/java/frc/robot/* src/main/java/frc/robot/
+          cp templates/src/main/deploy/example.txt src/main/deploy/
+
+          # Copy vendordeps directory
+          mkdir -p vendordeps
+          cp templates/vendordeps/README.md vendordeps/
+
+          # Commit and push if there are changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .vscode/ .wpilib/ gradle/ gradlew gradlew.bat build.gradle settings.gradle .gitignore WPILib-License.md src/ vendordeps/
+
+          if git diff --staged --quiet; then
+            echo "✅ WPILib project files already exist and are up to date!"
+          else
+            git commit -m "chore: add WPILib project structure"
+            git push
+            echo "✅ WPILib project files created and committed!"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Repository Setup Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Target Repository:" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 Repository: ${{ steps.repo-name.outputs.repository_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏆 Team Number: ${{ inputs.team_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 Competition: ${{ inputs.competition_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📅 Year: ${{ inputs.year }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Applied Settings:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Branch Protection Rules (requires CI)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Repository Settings" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Pull Request Template" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Devcontainer Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Git Hooks (pre-commit, commit-msg)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ CI Workflow (build.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ WPILib Project Structure (Gradle, VS Code, build files)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 Protected Branch: ${{ inputs.target_branch }}" >> $GITHUB_STEP_SUMMARY
