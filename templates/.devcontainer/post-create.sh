@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Point git at the repo's tracked hooks (.githooks/pre-push runs unit-scoped
+# tests and `gh student submit` before every push).
+git config core.hooksPath .githooks
+
 # Install system dependencies for WPILib simulation
 sudo apt-get update && sudo apt-get install -y \
   build-essential \
@@ -16,7 +20,10 @@ sudo apt-get update && sudo apt-get install -y \
   libx11-dev \
   xauth \
   x11-apps \
-  wget
+  wget \
+  gh
+
+gh extension install foundation50/gh-student
 
 
 # Create the WPILib home directory structure the vscode-wpilib extension expects.
@@ -47,13 +54,26 @@ rm -rf ~/.vscode-server/data/User/workspaceStorage/*/redhat.java
 # settings values, so we resolve and write the path here after $WPILIB_JDK is known.
 mkdir -p .vscode
 python3 - "$WPILIB_JDK" << 'PYEOF'
-import json, sys, os
+import json, sys, os, re
 path = ".vscode/settings.json"
 settings = {}
 if os.path.exists(path):
     with open(path) as f:
-        settings = json.load(f)
+        text = f.read()
+    try:
+        settings = json.loads(text)
+    except json.JSONDecodeError:
+        # VS Code allows comments and trailing commas in settings files; Python's
+        # json doesn't. Strip whole-line // comments and trailing commas, then retry.
+        text = re.sub(r"^\s*//.*$", "", text, flags=re.MULTILINE)
+        text = re.sub(r",(\s*[}\]])", r"\1", text)
+        settings = json.loads(text)
 settings["java.jdt.ls.java.home"] = sys.argv[1]
+# Map JavaSE-17 to the installed JDK so the Language Server doesn't reject
+# the project's sourceCompatibility = JavaVersion.VERSION_17 setting.
+settings["java.configuration.runtimes"] = [
+    {"name": "JavaSE-17", "path": sys.argv[1], "default": True}
+]
 with open(path, "w") as f:
     json.dump(settings, f, indent=2)
     f.write("\n")

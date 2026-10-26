@@ -1,7 +1,11 @@
 {
   "name": "WPILib Robot Development",
   "build": { "dockerfile": "Dockerfile" },
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  // Both run at the same time, so a WPILib setup failure can't skip the plugin install.
+  "postCreateCommand": {
+    "wpilib": "bash .devcontainer/post-create.sh",
+    "frc-mentor": "bash .devcontainer/install-frc-mentor.sh"
+  },
   "postAttachCommand": "bash .devcontainer/post-attach.sh",
   "features": {
     "ghcr.io/devcontainers/features/java:1": {
@@ -10,9 +14,15 @@
       "installMaven": "true"
     },
     "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    },
     "ghcr.io/devcontainers/features/desktop-lite:1": {
       "password": "vscode"
     }
+  },
+  "containerEnv": {
+    "CLAUDE_CODE_PLUGIN_PREFER_HTTPS": "1"
   },
   "remoteEnv": {
     "DISPLAY": ":1",
@@ -28,8 +38,30 @@
     "vscode": {
       "extensions": [
         "vscjava.vscode-java-pack",
-        "vscjava.vscode-gradle"
-      ]
+        "vscjava.vscode-gradle",
+        "anthropic.claude-code",
+        // Copilot off: "-" stops Codespaces/VS Code from auto-installing these.
+        "-GitHub.copilot",
+        "-GitHub.copilot-chat"
+      ],
+      "settings": {
+        // Turns off VS Code's built-in AI (Copilot chat, inline suggestions) in case
+        // Copilot ships built in. Claude Code is a separate extension and stays on.
+        "chat.disableAIFeatures": true,
+        "github.copilot.enable": { "*": false }
+      }
+    },
+    // A Codespace's token can only read its own repo by default. This asks for read
+    // access to frc-mentor (same org) so install-frc-mentor.sh can clone it.
+    // Codespaces asks you to authorize this when the Codespace is created.
+    "codespaces": {
+      "repositories": {
+        "RoboLancers/frc-mentor": {
+          "permissions": {
+            "contents": "read"
+          }
+        }
+      }
     }
   }
 }

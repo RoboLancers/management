@@ -11,3 +11,7 @@ RUN EXT_DIR=/home/vscode/.vscode-server/extensions/wpilibsuite.vscode-wpilib-202
  && cp -r /tmp/vscode-wpilib-unpack/extension/. "$EXT_DIR/" \
  && chown -R vscode:vscode /home/vscode/.vscode-server \
  && rm -rf /tmp/vscode-wpilib-unpack /tmp/vscode-wpilib.vsix
+
+# Same pre-install for the reload helper, which reloads the window once after
+# post-create.sh installs the FRC Mentor plugin. (Codespaces installs it in post-attach.sh.)
+COPY --chown=vscode:vscode reload-helper /home/vscode/.vscode-server/extensions/robolancers.devcontainer-reload-helper-1.0.0
